@@ -1,0 +1,69 @@
+---
+title: "Week 6 Hwk."
+author: "Matthew Farris"
+date: "October 4, 2015"
+output: html_document
+---
+
+```{r}
+#Initialization
+library(dplyr)
+library(tidyr)
+library(RCurl)
+
+#Create a data frame. I did not do the optional MySql Database. Just created a standard CSV file. 
+airlineURL <- getURL("https://raw.githubusercontent.com/mfarris9505/Airline_Delays/master/AirlineDelays.csv")
+
+airline <- read.csv(text=airlineURL)
+
+airline
+```
+
+The date frame created shows an almost identical one to file on the homework page. A couple key differences include, a header for the 2 initial columns, and Alaska and AM West were added to the 2th and 4th column. Honestly, this was done for simplicity sake.
+
+Now, we see that the data set is understandable, however, it is not best suited for R manipulation. First, we want our values in a more readable format. The best way to read this in would be given as follows: 
+
+```{r}
+Tidy_Airline <- airline %>%
+  gather("City", "N", 3:7)  %>% 
+  spread("Status","N")
+
+```
+
+Breaking these two steps down, we can see the transition we made, and why: First the gather functions was employed:
+
+```{r}
+airline %>%
+  gather("City", "N", 3:7)
+```
+This first step gathered all the values(these would be the observations) for the number of flights and grouped them by their respective flight destinations. This is an example of melting the data set. As the City itself was one of the variables of the dataset, creating a new column called Cities was necessary. As you can see, however, it created a excessive number of rows that were repetitive, which was both difficult to read, and equaly difficult to process in R. This is where the spread function came into play. We could now extract the two variables, on-time and Delayed, and create separate columns for each of them. The final manipulated data frame can be seen as such: 
+
+```{r} 
+Tidy_Airline
+```
+
+Now that the data is organized how we want, it is simply to do some analysis. For this project, we want to calculate which Airline has the most delays, and which location (based soley on these two airlines) has the most delays.The first that I think is the most relevant, is calculating the probablilty of a delayed flight. As we know from basic statistics, we can simply compute this as the percentage of delayed flights which is total number of delays, divided by the total number of flights.
+
+```{r}
+Tidy_Airline <- Tidy_Airline %>% mutate(Probability = Delayed/(Delayed + On_Time) )
+Tidy_Airline
+```
+
+We can now do some analysis, the first of which, is to compare the total airline delay data and calculate a mean value. This could be done as follows:
+
+```{r}
+Tidy_Airline %>% group_by(Airline) %>% 
+  summarise(Mean = mean(Probability))
+
+```
+
+From this summary we can see that Alaska airlines are less likely to be delayed to these 5 cities. 
+
+We could also find the probability of having a delayed flight by city (assuming these are the only two airlines flying to a particular destination). This can be seen as follows: 
+
+```{r}
+Tidy_Airline %>% group_by(City) %>% 
+  summarise(Mean = mean(Probability))
+```
+
+As we can see from this data, the cities with the most delays are Seattle and San Francisco, while Phoenix is relatively low by comparison. Some possible conclusion that could be drawn from this are that most delays are weather related. A brief Google search reveals that Phoenix has the lowest cloudy day of any other city, while both Seattle and San Francisco top 100 days or more of fog/clouds per year. It should be noted, however, that Seattle has nearly double that of San Francisco, but does not have a higher rate of delay. This is indicative of a possible correlation between cloudy days and delays, but not a causation.
